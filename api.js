@@ -205,6 +205,76 @@ app.post("/pelanggaran_siswa", (req,res)=>{
     })
 })
 
+// end-point menampilkan data pelanggaran siswa
+app.get("/pelanggaran_siswa", (req,res) => {
+    // create sql query
+    let sql = "select p.id_pelanggaran_siswa, p.id_siswa,p.waktu, s.nis, s.nama_siswa, p.id_user, u.nama_user " +
+     "from pelanggaran_siswa p join siswa s on p.id_siswa = s.id_siswa " +
+     "join user u on p.id_user = u.id_user"
+
+    // run query
+    db.query(sql, (error, result) => {
+        if (error) {
+            res.json({ message: error.message})   
+        }else{
+            res.json({
+                count: result.length,
+                pelanggaran_siswa: result
+            })
+        }
+    })
+})
+
+// end-point untuk menampilkan detail pelanggaran
+app.get("/pelanggaran_siswa/:id_pelanggaran_siswa", (req,res) => {
+    let param = { id_pelanggaran_siswa: req.params.id_pelanggaran_siswa}
+
+    // create sql query
+    let sql = "select p.nama_pelanggaran, p.poin " + 
+    "from detail_pelanggaran_siswa dps join pelanggaran p "+
+    "on p.id_pelanggaran = dps.id_pelanggaran " +
+    "where ?"
+
+    db.query(sql, param, (error, result) => {
+        if (error) {
+            res.json({ message: error.message})   
+        }else{
+            res.json({
+                count: result.length,
+                detail_pelanggaran_siswa: result
+            })
+        }
+    })
+})
+
+// end-point untuk menghapus data pelanggaran_siswa
+app.delete("/pelanggaran_siswa/:id_pelanggaran_siswa", (req, res) => {
+    let param = { id_pelanggaran_siswa: req.params.id_pelanggaran_siswa}
+
+    // create sql query delete detail_pelanggaran
+    let sql = "delete from detail_pelanggaran_siswa where ?"
+
+    db.query(sql, param, (error, result) => {
+        if (error) {
+            res.json({ message: error.message})
+        } else {
+            let param = { id_pelanggaran_siswa: req.params.id_pelanggaran_siswa}
+            // create sql query delete pelanggaran_siswa
+            let sql = "delete from pelanggaran_siswa where ?"
+
+            db.query(sql, param, (error, result) => {
+                if (error) {
+                    res.json({ message: error.message})
+                } else {
+                    res.json({message: "Data has been deleted"})
+                }
+            })
+        }
+    })
+
+})
+
+
 //port
 app.listen(8000, () => {
     console.log("Run on port 8000")
