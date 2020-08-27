@@ -32,25 +32,6 @@ app.listen(1000, ()=>{
     console.log("Run on port 1000")
 })
 
-//endpoint pertama => akses mobil
-app.get("/mobil/:id", (req,res)=>{
-    let sql = "select * from mobil"
-    db.query(sql, (error, result)=>{
-        let response = null
-        if (error) {
-            response = {
-                message: error.message
-            }
-        } else {
-            response = {
-                count: result.length,
-                mobil:result
-            }
-        }
-        res.json(response)
-    })
-})
-
 // => menanmbahkan data data penyewaan
 app.post("/:penyewaan", (req,res)=>{
     var penyewaan = req.params.penyewaan
@@ -167,5 +148,334 @@ app.post("/:penyewaan", (req,res)=>{
     
 })
 
+//endpoint get all
+app.get("/:penyewaan", (req,res)=>{
+    var penyewaan = req.params.penyewaan
+    if (penyewaan!='mobil'&&penyewaan!='sewa'&&penyewaan!='pelanggan'&&penyewaan!='karyawan') {
+        res.json({ket: 'Parameter salah'})
+    } else if (penyewaan == 'sewa') {
+        //buat query
+        let sql = "select id_sewa,p.id_mobil, p.id_pelanggan,p.id_karyawan,p.tgl_sewa, p.tgl_kembali, p.total_bayar, s.nama_karyawan, t.nama_pelanggan, u.nomor_mobil, u.merk " + "from sewa p INNER JOIN mobil u ON p.id_mobil = u.id_mobil " + "INNER JOIN pelanggan t ON p.id_pelanggan = t.id_pelanggan" + " INNER JOIN karyawan s ON p.id_karyawan = s.id_karyawan"
+        //run
+        db.query(sql, (error,result)=>{
+            if (error) {
+                res.json({message: error.message})
+            } else {
+                res.json({
+                    count: result.length,
+                    sewa: result
+                })
+            }
+        })
+    } else {
+        let sql = "select * from " + penyewaan
+        db.query(sql, (error,result)=>{
+            let response = null
+            if (error) {
+                response = {
+                    error: error.message
+                }
+            } else {
+                response = {
+                    count: result.length,
+                    penyewaan:result
+                }
+            }
+            res.json(response)
+        })
+    }{      
+    }
+})
 
+// end-point GET by ID => mobil
+app.get("/mobil/:id", (req,res)=>{
+    let data = {
+        id_mobil : req.params.id
+    }
+    //query
+    let sql = " select * from mobil where ?";
+    //run
+    db.query(sql, data,(error,result)=>{
+        let response = null;
+        if (error) {
+            response = {
+                //pesan error
+                message: error.message
+            }
+        } else {
+            response = {
+                //jumlah data
+                count: result.length,
+                mobil: result
+            }
+        }
+        res.json(response)// send response
+    })
+})
 
+// end-point GET by ID => karyawan
+app.get("/karyawan/:id", (req,res)=>{
+    let data = {
+        id_karyawan : req.params.id
+    }
+    //query
+    let sql = " select * from karyawan where ?";
+    //run
+    db.query(sql, data,(error,result)=>{
+        let response = null;
+        if (error) {
+            response = {
+                //pesan error
+                message: error.message
+            }
+        } else {
+            response = {
+                //jumlah data
+                count: result.length,
+                karyawan: result
+            }
+        }
+        res.json(response)// send response
+    })
+})
+
+// end-point GET by ID => pelanggan
+app.get("/pelanggan/:id", (req,res)=>{
+    let data = {
+        id_pelanggan : req.params.id
+    }
+    //query
+    let sql = " select * from pelanggan where ?";
+    //run
+    db.query(sql, data,(error,result)=>{
+        let response = null;
+        if (error) {
+            response = {
+                //pesan error
+                message: error.message
+            }
+        } else {
+            response = {
+                //jumlah data
+                count: result.length,
+                pelanggan: result
+            }
+        }
+        res.json(response)// send response
+    })
+})
+
+// end-point GET by ID => sewa
+app.get("/sewa/:id", (req,res)=>{
+    let data = {
+        id_sewa : req.params.id
+    }
+    //query
+    let sql = " select * from sewa where ?";
+    //run
+    db.query(sql, data,(error,result)=>{
+        let response = null;
+        if (error) {
+            response = {
+                //pesan error
+                message: error.message
+            }
+        } else {
+            response = {
+                //jumlah data
+                count: result.length,
+                sewa: result
+            }
+        }
+        res.json(response)// send response
+    })
+})
+
+//endpoint put
+app.put('/:penyewaan',(req,res)=>{
+    var penyewaan = req.params.penyewaan
+    if (penyewaan!='mobil'&&penyewaan!='karyawan'&&penyewaan!='pelanggan'&&penyewaan!='sewa') {
+        res.json({ket: 'parameter salah'})
+    } else if (penyewaan == 'pelanggan') { //jika pelanggan
+        let data = [{
+            nama_pelanggan: req.body.nama_pelanggan,
+            alamat_pelanggan: req.body.alamat_pelanggan,
+            kontrak: req.body.kontrak
+        },{
+            //primary key
+            id_pelanggan: req.body.id_pelanggan
+        }]
+        //query
+        let sql = "update pelanggan set ? where ?"
+        //run
+        db.query(sql, data,(error,result)=>{
+            let response = null
+            if (error) {
+                response = {
+                    message: error.message
+                }
+            } else {
+                response = {
+                    message: result.affectedRows + " data inserted"
+                }
+            }
+            res.json(response)
+        })
+    } else if (penyewaan == 'karyawan') {
+        let data = [{
+            nama_karyawan: req.body.nama_karyawan,
+            alamat_karyawan: req.body.alamat_karyawan,
+            kontrak: req.body.kontrak,
+            username: req.body.username,
+            password: req.body.password
+        },{
+            //primary key
+            id_karyawan: req.body.id_karyawan
+        }]
+        //query
+        let sql = "update karyawan set ? where ?"
+        //run
+        db.query(sql, data,(error,result)=>{
+            let response = null
+            if (error) {
+                response = {
+                    message: error.message
+                }
+            } else {
+                response = {
+                    message: result.affectedRows + " data inserted"
+                }
+            }
+            res.json(response)
+        })
+    } else if (penyewaan == 'mobil') {
+        let data = [{
+            nomor_mobil: req.body.nomor_mobil,
+            merk: req.body.mobil,
+            jenis: req.body.jenis,
+            warna: req.body.jenis,
+            tahun_pembuatan: req.body.tahun_pembuatan,
+            biaya_sewa_perhari: req.body.biaya_sewa_perhari,
+            image: req.body.image
+        },{
+            //primary key
+            id_mobil: req.body.id_mobil
+        }]
+        //query
+        let sql = "update mobil set ? where ?"
+        //run
+        db.query(sql, data,(error,result)=>{
+            let response = null
+            if (error) {
+                response = {
+                    message: error.message
+                }
+            } else {
+                response = {
+                    message: result.affectedRows + " data inserted"
+                }
+            }
+            res.json(response)
+        })
+    } else {     
+                }{        
+            }{
+        }{        
+    }
+})
+
+// end point delete => mobil
+app.delete("/mobil/:id",(req,res)=>{
+    //prepare data
+    let data = {
+        id_mobil: req.params.id_mobil
+    }
+    //query
+    let sql = "delete from mobil where ?"
+    //run
+    db.query(sql, data,(error,result)=>{
+        let response = null
+        if (error) {
+            response = {
+                message: error.message
+            }
+        } else {
+            response = {
+                message: result.affectedRows + " data deleted"
+            }
+        }
+        res.json(response)//kirim response
+    })
+})
+
+// end point delete => karyawan
+app.delete("/karyawan/:id",(req,res)=>{
+    //prepare data
+    let data = {
+        id_karyawan: req.params.id_karyawan
+    }
+    //query
+    let sql = "delete from karyawan where ?"
+    //run
+    db.query(sql, data,(error,result)=>{
+        let response = null
+        if (error) {
+            response = {
+                message: error.message
+            }
+        } else {
+            response = {
+                message: result.affectedRows + " data deleted"
+            }
+        }
+        res.json(response)//kirim response
+    })
+})
+
+// end point delete => pelanggan
+app.delete("/pelanggan/:id",(req,res)=>{
+    //prepare data
+    let data = {
+        id_pelanggan: req.params.id_pelanggan
+    }
+    //query
+    let sql = "delete from pelanggan where ?"
+    //run
+    db.query(sql, data,(error,result)=>{
+        let response = null
+        if (error) {
+            response = {
+                message: error.message
+            }
+        } else {
+            response = {
+                message: result.affectedRows + " data deleted"
+            }
+        }
+        res.json(response)//kirim response
+    })
+})
+
+// end point delete => sewa
+app.delete("/sewa/:id",(req,res)=>{
+    //prepare data
+    let data = {
+        id_sewa: req.params.id_sewa
+    }
+    //query
+    let sql = "delete from sewa where ?"
+    //run
+    db.query(sql, data,(error,result)=>{
+        let response = null
+        if (error) {
+            response = {
+                message: error.message
+            }
+        } else {
+            response = {
+                message: result.affectedRows + " data deleted"
+            }
+        }
+        res.json(response)//kirim response
+    })
+})
