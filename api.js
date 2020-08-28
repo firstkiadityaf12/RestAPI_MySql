@@ -3,7 +3,11 @@ const express = require("express")
 const bodyParser = require("body-parser")
 const cors = require("cors")
 const mysql = require("mysql")
-const moment = require("moment")
+
+//memanggil library
+const md5 = require("md5")
+const Cryptr = require("cryptr")
+const crypt = new Cryptr("123456") // secret key dan boleh diganti
 
 //implementasi nya
 const app =  express()
@@ -27,8 +31,78 @@ db.connect(error => {
     }
 })
 
+//validated token
+validateToken = () =>{
+    return (req,res, next) => {
+        //cek keberadaan "token" pada request header
+        if (!req.get("Token")) {
+            //jika token tidak ada
+            res.json({ message:"Access Forbidden"})
+        } else {
+            // tampung nilai Token
+            let token  = req.get("Token")
+            
+            // decrypt token menjadi id_user
+            let decryptToken = crypt.decrypt(token)
+
+            // sql cek id_user
+            let sql = "select * from user where ?"
+
+            // set parameter
+            let param = { id_user: decryptToken}
+
+            // run query
+            db.query(sql, param, (error, result) => {
+                if (error) throw error
+                 // cek keberadaan id_user
+                if (result.length > 0) {
+                    // id_user tersedia
+                    next()
+                } else {
+                    // jika user tidak tersedia
+                    res.json({
+                        message: "Invalid Token"
+                    })
+                }
+            })
+        }
+    }
+}
+
+//endpoint proses authentication
+app.post("/user/auth",(req, res)=>{
+    // tampung username dan password
+    let param = [
+        req.body.username, //username
+        md5(req.body.password) // password
+    ]
+    // create sql query
+    let sql = "select * from user where username = ? and password = ?"
+
+    // run query
+    db.query(sql, param, (error, result) => {
+        if (error) throw error
+
+        // cek jumlah data hasil query
+        if (result.length > 0) {
+            // user tersedia
+            res.json({
+                message: "Logged",
+                token: crypt.encrypt(result[0].id_user), // generate token
+                data: result
+            })
+        } else {
+            // user tidak tersedia
+            res.json({
+                message: "Invalid username/password"
+            })
+        }
+    })
+
+})
+
 //endpoint akses data siswa mengguankan method GET
-app.get("/siswa", (req,res)=>{
+app.get("/siswa", validateToken(), (req,res)=>{
     //buat query sql
     let sql = "select * from siswa"
     // run query
@@ -49,7 +123,7 @@ app.get("/siswa", (req,res)=>{
 })
 
 //endpoint akses data siswa berdasarkan id menggunakan method GET
-app.get("/siswa/:id", (req,res)=>{
+app.get("/siswa/:id",validateToken(), (req,res)=>{
     let data = {
         id_siswa: req.params.id
     }
@@ -74,7 +148,7 @@ app.get("/siswa/:id", (req,res)=>{
 })
 
 // --> endpoint menyimpan data siswa method POST
-app.post("/siswa", (req,res)=>{
+app.post("/siswa", validateToken(), (req,res)=>{
     //prepare data
     let data = {
         nis: req.body.nis,
@@ -102,7 +176,7 @@ app.post("/siswa", (req,res)=>{
 })
 
 //endpoint mengubah data siswa menggunakan method put
-app.put("/siswa", (req,res)=>{
+app.put("/siswa",validateToken(), (req,res)=>{
     //prepare data
     let data = [
         //data
@@ -138,7 +212,7 @@ app.put("/siswa", (req,res)=>{
 // menghapus data menggunakan method DELETE
 
 // ---> endpoint menghapus data siswa berdasarkan id_siswa
-app.delete("/siswa/:id", (req,res)=>{
+app.delete("/siswa/:id",validateToken(), (req,res)=>{
     //prepare data
     let data = {
         id_siswa: req.params.id
@@ -163,7 +237,7 @@ app.delete("/siswa/:id", (req,res)=>{
 })
 
 //endpoint tambah data pelanggaran siswa
-app.post("/pelanggaran_siswa", (req,res)=>{
+app.post("/pelanggaran_siswa",validateToken(), (req,res)=>{
     //prepeara data to pelanggaran siswa
     let data = {
         id_siswa: req.body.id_siswa,

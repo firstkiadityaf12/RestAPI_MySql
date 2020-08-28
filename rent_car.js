@@ -3,7 +3,6 @@ const express = require("express")
 const bodyParser = require("body-parser")
 const cors = require("cors")
 const mysql = require("mysql")
-const moment = require("moment")
 
 //implementasi
 const app = express()
