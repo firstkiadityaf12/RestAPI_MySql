@@ -4,6 +4,11 @@ const bodyParser = require("body-parser")
 const cors = require("cors")
 const mysql = require("mysql")
 
+// inisialisasi
+const md5 = require("md5")
+const Cryptr = require("cryptr")
+const crypt = new Cryptr("098765")
+
 //implementasi
 const app = express()
 app.use(cors())
@@ -29,6 +34,72 @@ db.connect(error => {
 //server
 app.listen(1000, ()=>{
     console.log("Run on port 1000")
+})
+
+//validate token
+validateToken = () => {
+    return (req,res, next) => {
+        //cek keberadaan "token" pada request header
+        if (!req.get("Token")) {
+            //jika token tidak ada
+            res.json({ message:"Access Forbidden"})
+        } else {
+            // tampung nilai Token
+            let token  = req.get("Token")
+            
+            // decrypt token menjadi id_user
+            let decryptToken = crypt.decrypt(token)
+
+            // sql cek id_user
+            let sql = "select * from karyawan where ?"
+
+            // set parameter
+            let param = { id_karyawan: decryptToken}
+
+            // run query
+            db.query(sql, param, (error, result) => {
+                if (error) throw error
+                 // cek keberadaan id_user
+                if (result.length > 0) {
+                    // id_user tersedia
+                    next()
+                } else {
+                    // jika user tidak tersedia
+                    res.json({
+                        message: "Invalid Token"
+                    })
+                }
+            })
+        }
+    }
+}
+
+//endpoint proses authentication karyawan
+app.post("/karyawan/auth", (req,res)=>{
+    //tampung username dan password
+    let param = [
+        req.body.username, //username
+        md5(req.body.password) //password
+    ]
+    //query
+    let sql = "select * from user where username = ? and password = ?"
+    //run
+    db.query(sql, param,(error,result)=>{
+        if (error) throw error
+        if (result.length > 0) {
+            //user tersedia
+            res.json({
+                message: "logged",
+                token: crypt.encrypt(result[0].id_karyawan), //generate token
+                data: result
+            })
+        } else {
+            // user tidak tersedia
+            res.json({
+                message: "Invalid username/password"
+            })
+        }
+    })
 })
 
 // => menanmbahkan data data penyewaan
@@ -148,7 +219,7 @@ app.post("/:penyewaan", (req,res)=>{
 })
 
 //endpoint get all
-app.get("/:penyewaan", (req,res)=>{
+app.get("/:penyewaan",validateToken(), (req,res)=>{
     var penyewaan = req.params.penyewaan
     if (penyewaan!='mobil'&&penyewaan!='sewa'&&penyewaan!='pelanggan'&&penyewaan!='karyawan') {
         res.json({ket: 'Parameter salah'})
